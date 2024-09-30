@@ -1,101 +1,147 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import Script from '../components/Script';
+
+// Helper function to calculate word count
+const calculateWordCount = (script: { text: string }[]) => {
+  return script.reduce((count, line) => count + line.text.split(/\s+/).length, 0);
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [topic, setTopic] = useState('');
+  const [duration, setDuration] = useState('4');
+  const [initialScript, setInitialScript] = useState(null);
+  const [improvedScript, setImprovedScript] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isInitialScriptVisible, setIsInitialScriptVisible] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const durationOptions = [
+    { value: '2', label: '2 minutes (environ 250 mots)' },
+    { value: '4', label: '4 minutes (environ 500 mots)' },
+    { value: '6', label: '6 minutes (environ 750 mots)' },
+  ];
+
+  const generateScript = async () => {
+    setIsLoading(true);
+    setError('');
+    setInitialScript(null);
+    setImprovedScript(null);
+    setIsInitialScriptVisible(false);
+
+    try {
+      // Generate initial script
+      const response = await fetch('/api/generate-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic, duration }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate initial script');
+      }
+
+      setInitialScript(data.script);
+
+      // Validate and improve the script
+      const improvedResponse = await fetch('/api/validate-and-improve-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ script: data.script, duration }),
+      });
+      const improvedData = await improvedResponse.json();
+
+      if (!improvedResponse.ok) {
+        throw new Error(improvedData.error || 'Failed to improve script');
+      }
+
+      setImprovedScript(improvedData.script);
+    } catch (error: unknown) {
+      console.error('Error generating or improving script:', error);
+      console.log('An error occurred while generating or improving the script. Please try again.');
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
+    }
+    setIsLoading(false);
+    console.log('Script generation process completed.');
+  };
+
+  const toggleInitialScript = () => {
+    setIsInitialScriptVisible(!isInitialScriptVisible);
+  };
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <h1 className="text-4xl font-bold mb-8">Générateur de Script de Podcast</h1>
+      <div className="w-full max-w-md">
+        <input
+          type="text"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="Entrez le sujet du podcast"
+          className="w-full p-2 mb-4 border border-gray-300 rounded"
+        />
+        <select
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          className="w-full p-2 mb-4 border border-gray-300 rounded"
+        >
+          {durationOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={generateScript}
+          disabled={isLoading}
+          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+        >
+          {isLoading ? 'Génération en cours...' : 'Générer le script'}
+        </button>
+      </div>
+      {error && <p className="text-red-500 mt-4">{error}</p>}
+      {initialScript && (
+        <div className="mt-8 w-full max-w-2xl">
+          <button
+            onClick={toggleInitialScript}
+            className="mb-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {isInitialScriptVisible ? 'Masquer' : 'Afficher'} le script initial
+          </button>
+          {isInitialScriptVisible && (
+            <div className="border p-4 rounded">
+              <h2 className="text-2xl font-bold mb-4">
+                Script initial : 
+                <span className="text-sm font-normal ml-2">
+                  ({calculateWordCount(initialScript)} mots)
+                </span>
+              </h2>
+              <Script script={initialScript} />
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      )}
+      {improvedScript && (
+        <div className="mt-8 w-full max-w-2xl">
+          <h2 className="text-2xl font-bold mb-4">
+            Script amélioré : 
+            <span className="text-sm font-normal ml-2">
+              ({calculateWordCount(improvedScript)} mots)
+            </span>
+          </h2>
+          <Script script={improvedScript} />
+        </div>
+      )}
+    </main>
   );
 }
