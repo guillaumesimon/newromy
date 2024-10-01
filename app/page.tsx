@@ -62,9 +62,13 @@ export default function Home() {
       }
 
       setImprovedScript(improvedData.script);
+
+      // Add logs to display the first few dialogue lines of the generated script
+      console.log('First few dialogue lines of the improved script:');
+      console.log(JSON.stringify(improvedData.script.slice(0, 3), null, 2));
+
     } catch (error: unknown) {
       console.error('Error generating or improving script:', error);
-      console.log('An error occurred while generating or improving the script. Please try again.');
       if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -80,20 +84,22 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold mb-8">Générateur de Script de Podcast</h1>
-      <div className="w-full max-w-md">
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
+        <h1 className="text-4xl font-bold mb-8">Script Generator and Text-to-Speech</h1>
+      </div>
+      <div className="w-full max-w-2xl">
         <input
           type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          placeholder="Entrez le sujet du podcast"
-          className="w-full p-2 mb-4 border border-gray-300 rounded"
+          placeholder="Enter topic"
+          className="w-full p-2 mb-4 border rounded"
         />
         <select
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
-          className="w-full p-2 mb-4 border border-gray-300 rounded"
+          className="w-full p-2 mb-4 border rounded"
         >
           {durationOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -104,44 +110,30 @@ export default function Home() {
         <button
           onClick={generateScript}
           disabled={isLoading}
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors"
         >
-          {isLoading ? 'Génération en cours...' : 'Générer le script'}
+          {isLoading ? 'Generating...' : 'Generate Script'}
         </button>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+        {improvedScript && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Generated Script</h2>
+            <Script script={improvedScript} />
+            <button
+              onClick={toggleInitialScript}
+              className="mt-4 bg-gray-200 text-gray-800 p-2 rounded hover:bg-gray-300 transition-colors"
+            >
+              {isInitialScriptVisible ? 'Hide' : 'Show'} Initial Script
+            </button>
+            {isInitialScriptVisible && initialScript && (
+              <div className="mt-4">
+                <h3 className="text-xl font-bold mb-2">Initial Script</h3>
+                <Script script={initialScript} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-      {initialScript && (
-        <div className="mt-8 w-full max-w-2xl">
-          <button
-            onClick={toggleInitialScript}
-            className="mb-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center"
-          >
-            {isInitialScriptVisible ? 'Masquer' : 'Afficher'} le script initial
-          </button>
-          {isInitialScriptVisible && (
-            <div className="border p-4 rounded">
-              <h2 className="text-2xl font-bold mb-4">
-                Script initial : 
-                <span className="text-sm font-normal ml-2">
-                  ({calculateWordCount(initialScript)} mots)
-                </span>
-              </h2>
-              <Script script={initialScript} />
-            </div>
-          )}
-        </div>
-      )}
-      {improvedScript && (
-        <div className="mt-8 w-full max-w-2xl">
-          <h2 className="text-2xl font-bold mb-4">
-            Script amélioré : 
-            <span className="text-sm font-normal ml-2">
-              ({calculateWordCount(improvedScript)} mots)
-            </span>
-          </h2>
-          <Script script={improvedScript} />
-        </div>
-      )}
     </main>
   );
 }

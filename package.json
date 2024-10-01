@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
+    "@cartesia/cartesia-js": "^1.0.3",
     "axios": "^1.7.7",
     "next": "14.2.13",
     "react": "^18",
