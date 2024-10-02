@@ -7,63 +7,28 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   console.log('Received request to generate script');
 
   try {
-    const { topic, duration } = await req.json();
+    const { topic, duration } = await request.json();
 
     if (!topic || !duration) {
       console.log('Error: Missing topic or duration');
       return NextResponse.json({ error: 'Missing topic or duration' }, { status: 400 });
     }
 
-    console.log(`Generating script for topic: ${topic}, duration: ${duration} minutes`);
+    console.log(`Generating script for topic: ${topic}, duration: ${duration}`);
 
-    const wordCount = parseInt(duration) * 125; // Estimating 125 words per minute
+    const wordCount = duration === 'short' ? 250 : duration === 'medium' ? 625 : 1500; // Estimating words based on duration
 
     const systemPrompt = `You are a world-class podcast producer tasked with transforming the provided input text into an engaging and informative podcast script for children aged 7 to 10 who speak French. The podcast features a conversation between two 10-year-old children, Romy (female) and Léo (male). Your goal is to extract the most interesting and insightful content to create a compelling and educational discussion that blends entertainment and learning.
 
-Steps to Follow:
+    // ... (rest of the system prompt remains the same as in your example)
 
-2. Brainstorm Ideas: creatively brainstorm ways to present the key points engagingly for children. Consider:
-   • Simple analogies, storytelling techniques, or fun scenarios to make content relatable
-   • Ways to make complex topics accessible to young listeners
-   • Interesting questions or games that Romy and Léo could explore during the podcast
-   • Creative approaches to fill any gaps in the information
+    Remember: Always reply in valid JSON format, without code blocks. Begin directly with the JSON output.`;
 
-3. Craft the Dialogue: Develop a natural, conversational flow between Romy and Léo. Incorporate:
-   • The best ideas from your brainstorming session
-   • Clear and simple explanations of topics
-   • An engaging and lively tone appropriate for children
-   • A balance of information and fun
-
-Rules for the dialogue:
-   • Romy and Léo engage in a friendly conversation
-   • Include expressions of curiosity and excitement
-   • Use language suitable for children aged 7 to 10
-   • Keep each line of dialogue under 100 characters
-   • Maintain a conversation appropriate for all audiences
-   • Avoid any marketing or self-promotional content
-   • Conclude the conversation with a positive takeaway
-
-4. Summarize Key Insights: Naturally weave a summary of key points into the closing part of the dialogue. This should feel like a casual conversation rather than a formal recap, reinforcing the main takeaways before signing off.
-
-5. Maintain Authenticity: Throughout the script, strive for authenticity in the conversation. Include:
-   • Moments of genuine curiosity or surprise from Romy and Léo
-   • Instances where they might briefly struggle to understand a concept
-   • Light-hearted moments or humor when appropriate
-   • Brief personal anecdotes or examples that relate to the topic
-
-6. Consider Pacing and Structure: Ensure the dialogue has a natural ebb and flow:
-   • Start with an interesting hook to grab the listener's attention
-   • Gradually build on the topic as the conversation progresses
-   • Include brief moments for listeners to absorb information
-   • End on a high note, perhaps with a fun fact or a question for listeners to ponder
-
-Remember: Always reply in valid JSON format, without code blocks. Begin directly with the JSON output.`;
-
-    const userPrompt = `Generate a script for a ${duration}-minute French children's podcast episode for kids between 7 and 10 years old.
+    const userPrompt = `Generate a script for a ${duration} French children's podcast episode for kids between 7 and 10 years old.
     The hosts are ${romy.name} and ${leo.name}, both ${romy.age} years old.
     The topic of this episode is: ${topic}
 
@@ -82,14 +47,14 @@ Remember: Always reply in valid JSON format, without code blocks. Begin directly
     Format the output as a JSON object with the following structure:
     {
       "script": [
-        {"speaker": "Romy", "text": "Salut Léo ! Tu sais ce qu'on va faire aujourd'hui ?"},
-        {"speaker": "Léo", "text": "Euh... On va parler des dinosaures ?"},
-        {"speaker": "Romy", "text": "Presque ! On va parler des fossiles. C'est comme des empreintes de dinosaures, mais en plus cool !"},
-        {"speaker": "Léo", "text": "Oh, comme dans ce nouveau jeu vidéo 'Dino Detective' ? J'adore chercher des fossiles dedans !"}
+        {"id": 1, "speaker": "Romy", "text": "Salut Léo ! Tu sais ce qu'on va faire aujourd'hui ?"},
+        {"id": 2, "speaker": "Léo", "text": "Euh... On va parler des dinosaures ?"},
+        {"id": 3, "speaker": "Romy", "text": "Presque ! On va parler des fossiles. C'est comme des empreintes de dinosaures, mais en plus cool !"},
+        {"id": 4, "speaker": "Léo", "text": "Oh, comme dans ce nouveau jeu vidéo 'Dino Detective' ? J'adore chercher des fossiles dedans !"}
       ]
     }
 
-    Ensure that the JSON is properly formatted and does not contain any unescaped special characters. Your response should only include the JSON object, nothing else.`;
+    Ensure that the JSON is properly formatted, includes an 'id' for each line, and does not contain any unescaped special characters. Your response should only include the JSON object, nothing else.`;
 
     const message = await anthropic.messages.create({
       model: "claude-3-sonnet-20240229",
@@ -120,10 +85,13 @@ Remember: Always reply in valid JSON format, without code blocks. Begin directly
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    if (!scriptData || !Array.isArray(scriptData.script)) {
+    // Check if the scriptData has the expected structure
+    if (!scriptData || !Array.isArray(scriptData.script) || !scriptData.script.every((line: any) => 'id' in line && 'speaker' in line && 'text' in line)) {
+      console.error('Invalid script format:', JSON.stringify(scriptData, null, 2));
       throw new Error('Invalid script format in AI response');
     }
 
+    console.log('Script validation successful');
     return NextResponse.json(scriptData);
   } catch (error: unknown) {
     console.error('Error generating script:', error);

@@ -9,18 +9,28 @@ import util from 'util';
 const execPromise = util.promisify(exec);
 
 const SAMPLE_RATE = 44100;
+const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
-async function generateAndUploadAudio(text: string, speaker: string) {
+async function generateAndUploadAudio(text: string, speaker: string, topicId: string) {
   console.log(`Starting audio generation for: ${speaker}`);
   console.time('Audio processing time');
 
-  const normalizedSpeaker = speaker.toLowerCase();
-  const voiceId = normalizedSpeaker === 'leo' ? leo.voiceId : romy.voiceId;
+  const normalizedSpeaker = speaker.toLowerCase().trim();
+  let voiceId;
 
-  const tempDir = path.join(process.cwd(), 'tmp');
-  await fs.mkdir(tempDir, { recursive: true });
-  const rawAudioFile = path.join(tempDir, `raw_audio_${Date.now()}.raw`);
-  const wavAudioFile = path.join(tempDir, `audio_${Date.now()}.wav`);
+  if (normalizedSpeaker.includes('leo') || normalizedSpeaker.includes('léo')) {
+    voiceId = leo.voiceId;
+  } else if (normalizedSpeaker.includes('romy')) {
+    voiceId = romy.voiceId;
+  } else {
+    throw new Error(`Unknown speaker: ${speaker}`);
+  }
+
+  console.log(`Using voice ID: ${voiceId} for speaker: ${speaker}`);
+
+  await fs.mkdir(TEMP_DIR, { recursive: true });
+  const rawAudioFile = path.join(TEMP_DIR, `raw_audio_${Date.now()}.raw`);
+  const wavAudioFile = path.join(TEMP_DIR, `audio_${Date.now()}.wav`);
 
   console.log(`Generating audio for speaker: ${speaker}, text: "${text.substring(0, 30)}..."`);
   
@@ -79,26 +89,98 @@ async function generateAndUploadAudio(text: string, speaker: string) {
   }
 
   const bytescaleData = await bytescaleResponse.json();
-  console.log(`File uploaded to Bytescale. URL: ${bytescaleData.fileUrl}, Path: ${bytescaleData.filePath}`);
-
-  await fs.unlink(rawAudioFile);
-  await fs.unlink(wavAudioFile);
-  console.log('Temporary files cleaned up');
+  console.log(`File uploaded to Bytescale. URL: ${bytescaleData.fileUrl}`);
 
   console.timeEnd('Audio processing time');
-  return { fileUrl: bytescaleData.fileUrl, filePath: bytescaleData.filePath };
+  return { fileUrl: bytescaleData.fileUrl, localPath: wavAudioFile };
+}
+
+async function combineAudioFiles(files: string[], topicId: string) {
+  console.log('Combining audio files...');
+  const outputFile = path.join(TEMP_DIR, `combined_${topicId}.wav`);
+  const fileList = files.map(file => `file '${file}'`).join('\n');
+  const listFile = path.join(TEMP_DIR, 'file_list.txt');
+  
+  await fs.writeFile(listFile, fileList);
+  
+  await execPromise(`ffmpeg -f concat -safe 0 -i ${listFile} -c copy ${outputFile}`);
+  console.log(`Combined audio file created: ${outputFile}`);
+  
+  return outputFile;
+}
+
+async function uploadToBytescale(filePath: string) {
+  console.log('Uploading combined file to Bytescale...');
+  const fileData = await fs.readFile(filePath);
+
+  const bytescaleApiKey = process.env.BYTESCALE_API_KEY;
+  const bytescaleAccountId = process.env.BYTESCALE_ACCOUNT_ID;
+
+  const bytescaleUrl = `https://api.bytescale.com/v2/accounts/${bytescaleAccountId}/uploads/binary`;
+  const bytescaleResponse = await fetch(bytescaleUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${bytescaleApiKey}`,
+      'Content-Type': 'audio/wav',
+    },
+    body: fileData,
+  });
+
+  if (!bytescaleResponse.ok) {
+    const errorText = await bytescaleResponse.text();
+    throw new Error(`Failed to upload to Bytescale. Status: ${bytescaleResponse.status}, Error: ${errorText}`);
+  }
+
+  const bytescaleData = await bytescaleResponse.json();
+  console.log(`Combined file uploaded to Bytescale. URL: ${bytescaleData.fileUrl}`);
+  return bytescaleData.fileUrl;
+}
+
+async function cleanupTempFiles() {
+  console.log('Cleaning up temporary files...');
+  const files = await fs.readdir(TEMP_DIR);
+  for (const file of files) {
+    await fs.unlink(path.join(TEMP_DIR, file));
+  }
+  console.log('Temporary files cleaned up');
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, speaker } = await req.json();
+    const body = await req.json();
+    const { text, speaker, dialogues, topicId } = body;
 
-    if (!text || !speaker) {
-      throw new Error('Text or speaker not provided');
+    if (text && speaker) {
+      // Single audio generation
+      console.log(`Received request for single audio generation: ${speaker}`);
+      const result = await generateAndUploadAudio(text, speaker, `single_${Date.now()}`);
+      return NextResponse.json({ success: true, fileUrl: result.fileUrl });
+    } else if (dialogues && topicId) {
+      // Combined audio generation
+      console.log(`Received request for topicId: ${topicId}, dialogues count: ${dialogues.length}`);
+      
+      const audioFiles = [];
+      for (const dialogue of dialogues) {
+        const result = await generateAndUploadAudio(dialogue.text, dialogue.speaker, topicId);
+        audioFiles.push(result);
+      }
+
+      // Combine audio files using local paths
+      const combinedFilePath = await combineAudioFiles(audioFiles.map(file => file.localPath), topicId);
+      
+      // Upload the combined file to Bytescale
+      const combinedFileUrl = await uploadToBytescale(combinedFilePath);
+      
+      // Clean up temporary files after successful upload
+      await cleanupTempFiles();
+
+      // Log the successful completion of the process
+      console.log(`Audio generation and upload completed for topicId: ${topicId}. Combined File URL: ${combinedFileUrl}`);
+
+      return NextResponse.json({ success: true, fileUrl: combinedFileUrl, individualUrls: audioFiles.map(file => file.fileUrl) });
+    } else {
+      throw new Error('Invalid request body');
     }
-
-    const result = await generateAndUploadAudio(text, speaker);
-    return NextResponse.json({ success: true, fileUrl: result.fileUrl });
   } catch (error) {
     console.error('Error generating and uploading audio:', error);
     return NextResponse.json({ 

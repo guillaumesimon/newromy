@@ -34,11 +34,10 @@ Guidelines for improvement:
 6. Ensure a natural conversation flow with occasional interruptions or tangents.
 7. Include playful, friendly teasing between Romy and Léo.
 8. Use age-appropriate French expressions and slang.
-9. Incorporate 1-3 references to recent pop culture elements relevant to French children.
 10. Stick to factual information and avoid any invented facts or hallucinations.
 11. Conclude with a positive takeaway or interesting question for listeners.
 
-IMPORTANT: Each line of dialogue must be no more than 100 characters long.
+IMPORTANT: Each line of dialogue must be no more than 150 characters long.
 
 Your output should be a valid JSON object with a 'script' key containing an array of dialogue objects. Begin directly with the JSON output, using this format:
 
@@ -55,8 +54,11 @@ ${JSON.stringify(script, null, 2)}
 
 Target word count: ${targetWordCount}
 Current word count: ${currentWordCount}
+ENSURE that we meet the word count is met.
 
-Improve the script according to the guidelines provided in the system prompt.`;
+Improve the script according to the guidelines provided in the system prompt.
+Ensure a natural conversation flow with occasional interruptions or tangents. Keep in mind that the audience of kids and that we want to get them engaged and excited about the topic.
+`;
 
     const message = await anthropic.messages.create({
       model: "claude-3-sonnet-20240229",

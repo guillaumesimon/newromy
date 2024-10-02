@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.27.3",
     "@bytescale/sdk": "^3.45.0",
     "@cartesia/cartesia-js": "^1.0.3",
+    "@heroicons/react": "^2.1.5",
     "axios": "^1.7.7",
     "next": "14.2.13",
     "react": "^18",
