@@ -22,7 +22,48 @@ export async function POST(req: Request) {
 
     const wordCount = parseInt(duration) * 125; // Estimating 125 words per minute
 
-    const prompt = `Generate a script for a ${duration}-minute French children's podcast episode for kids between 7 and 10 years old.
+    const systemPrompt = `You are a world-class podcast producer tasked with transforming the provided input text into an engaging and informative podcast script for children aged 7 to 10 who speak French. The podcast features a conversation between two 10-year-old children, Romy (female) and Léo (male). Your goal is to extract the most interesting and insightful content to create a compelling and educational discussion that blends entertainment and learning.
+
+Steps to Follow:
+
+2. Brainstorm Ideas: creatively brainstorm ways to present the key points engagingly for children. Consider:
+   • Simple analogies, storytelling techniques, or fun scenarios to make content relatable
+   • Ways to make complex topics accessible to young listeners
+   • Interesting questions or games that Romy and Léo could explore during the podcast
+   • Creative approaches to fill any gaps in the information
+
+3. Craft the Dialogue: Develop a natural, conversational flow between Romy and Léo. Incorporate:
+   • The best ideas from your brainstorming session
+   • Clear and simple explanations of topics
+   • An engaging and lively tone appropriate for children
+   • A balance of information and fun
+
+Rules for the dialogue:
+   • Romy and Léo engage in a friendly conversation
+   • Include expressions of curiosity and excitement
+   • Use language suitable for children aged 7 to 10
+   • Keep each line of dialogue under 100 characters
+   • Maintain a conversation appropriate for all audiences
+   • Avoid any marketing or self-promotional content
+   • Conclude the conversation with a positive takeaway
+
+4. Summarize Key Insights: Naturally weave a summary of key points into the closing part of the dialogue. This should feel like a casual conversation rather than a formal recap, reinforcing the main takeaways before signing off.
+
+5. Maintain Authenticity: Throughout the script, strive for authenticity in the conversation. Include:
+   • Moments of genuine curiosity or surprise from Romy and Léo
+   • Instances where they might briefly struggle to understand a concept
+   • Light-hearted moments or humor when appropriate
+   • Brief personal anecdotes or examples that relate to the topic
+
+6. Consider Pacing and Structure: Ensure the dialogue has a natural ebb and flow:
+   • Start with an interesting hook to grab the listener's attention
+   • Gradually build on the topic as the conversation progresses
+   • Include brief moments for listeners to absorb information
+   • End on a high note, perhaps with a fun fact or a question for listeners to ponder
+
+Remember: Always reply in valid JSON format, without code blocks. Begin directly with the JSON output.`;
+
+    const userPrompt = `Generate a script for a ${duration}-minute French children's podcast episode for kids between 7 and 10 years old.
     The hosts are ${romy.name} and ${leo.name}, both ${romy.age} years old.
     The topic of this episode is: ${topic}
 
@@ -35,27 +76,10 @@ export async function POST(req: Request) {
     - Personality: ${leo.personality}
     - Speaking style: ${leo.speakingStyle}
     - Specifics: ${leo.specifics}
-    - New requirement: Léo should use references to very recent pop culture elements that French kids aged 7-10 can relate to. He should also include jokes or funny comments about these references. Limit these references to a maximum of 3 throughout the episode, and ensure they're not overused.
 
-    Important guidelines for the script:
-    1. Start the episode with the hosts greeting each other and briefly explaining what they'll be talking about.
-    2. Use simple, everyday French vocabulary that 9-year-olds would use.
-    3. Keep sentences short and easy to understand.
-    4. Include common French children's expressions and slang (but keep it appropriate).
-    5. Reflect the natural excitement, curiosity, and sometimes imperfect grammar of children.
-    6. Incorporate playful elements like sound effects (written out) or imaginative scenarios.
-    7. Ensure the dialogue flows naturally, with occasional interruptions or tangents typical of children's conversations.
-    8. Include some playful, friendly teasing between Romy and Léo throughout the episode.
-    9. While educational, make sure the tone remains fun and not too formal or adult-like.
-    10. Aim for approximately ${wordCount} words in total.
-    11. Have Léo make 1-3 references to recent pop culture elements (e.g., popular kids' movies, TV shows, video games, or toys) and include jokes or funny comments about these references. Ensure these references are spread out and not overused.
-
-    The script should be entertaining and educational, with a natural flow of conversation between ${romy.name} and ${leo.name}.
-    Make sure to include their unique characteristics in their dialogue.
-    The script should be in French and last about ${duration} minutes when spoken aloud.
+    Aim for approximately ${wordCount} words in total.
 
     Format the output as a JSON object with the following structure:
-    <example>
     {
       "script": [
         {"speaker": "Romy", "text": "Salut Léo ! Tu sais ce qu'on va faire aujourd'hui ?"},
@@ -64,7 +88,6 @@ export async function POST(req: Request) {
         {"speaker": "Léo", "text": "Oh, comme dans ce nouveau jeu vidéo 'Dino Detective' ? J'adore chercher des fossiles dedans !"}
       ]
     }
-    </example>
 
     Ensure that the JSON is properly formatted and does not contain any unescaped special characters. Your response should only include the JSON object, nothing else.`;
 
@@ -72,10 +95,11 @@ export async function POST(req: Request) {
       model: "claude-3-sonnet-20240229",
       max_tokens: 1500,
       temperature: 0.7,
+      system: systemPrompt,
       messages: [
         {
           role: "user",
-          content: prompt
+          content: userPrompt
         }
       ]
     });

@@ -10,7 +10,7 @@ const calculateWordCount = (script: { text: string }[]) => {
 
 export default function Home() {
   const [topic, setTopic] = useState('');
-  const [duration, setDuration] = useState('4');
+  const [duration, setDuration] = useState('4'); // Default to 4 minutes
   const [initialScript, setInitialScript] = useState(null);
   const [improvedScript, setImprovedScript] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +31,16 @@ export default function Home() {
     setIsInitialScriptVisible(false);
 
     try {
+      if (!topic.trim()) {
+        throw new Error('Please enter a topic');
+      }
+
+      if (!duration) {
+        throw new Error('Please select a duration');
+      }
+
+      console.log(`Generating script for topic: "${topic}", duration: ${duration} minutes`);
+
       // Generate initial script
       const response = await fetch('/api/generate-script', {
         method: 'POST',
@@ -74,9 +84,10 @@ export default function Home() {
       } else {
         setError('An unexpected error occurred');
       }
+    } finally {
+      setIsLoading(false);
+      console.log('Script generation process completed.');
     }
-    setIsLoading(false);
-    console.log('Script generation process completed.');
   };
 
   const toggleInitialScript = () => {

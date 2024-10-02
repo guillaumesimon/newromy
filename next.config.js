@@ -1,9 +1,15 @@
 const path = require('path');
 
-module.exports = {
-  // ... rest of your config ...
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname);
     return config;
   },
-};
+  serverRuntimeConfig: {
+    PROJECT_ROOT: __dirname
+  }
+}
+
+module.exports = nextConfig

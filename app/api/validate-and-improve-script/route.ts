@@ -23,58 +23,50 @@ export async function POST(req: Request) {
 
     console.log(`Validating and improving script. Target word count: ${targetWordCount}, Current word count: ${currentWordCount}`);
 
-    const prompt = `Please review and improve the following script for a ${duration}-minute children's podcast. The target word count is approximately ${targetWordCount} words, and the current word count is ${currentWordCount}.
+    const systemPrompt = `You are an expert script editor for children's podcasts. Your task is to review and improve a script for a ${duration}-minute French podcast aimed at children aged 7 to 10. The podcast features two hosts, Romy (female) and Léo (male), both 9 years old.
 
-    ${romy.name}'s character:
-    - Personality: ${romy.personality}
-    - Speaking style: ${romy.speakingStyle}
-    - Specifics: ${romy.specifics}
+Guidelines for improvement:
+1. Ensure the episode starts with the hosts greeting each other and briefly explaining the topic.
+2. Adjust the word count to be closer to the target (${targetWordCount} words).
+3. Use simple language appropriate for 9-year-old French children.
+4. Maintain Romy and Léo's unique speaking styles and personalities.
+5. Keep the content educational, fun, and engaging.
+6. Ensure a natural conversation flow with occasional interruptions or tangents.
+7. Include playful, friendly teasing between Romy and Léo.
+8. Use age-appropriate French expressions and slang.
+9. Incorporate 1-3 references to recent pop culture elements relevant to French children.
+10. Stick to factual information and avoid any invented facts or hallucinations.
+11. Conclude with a positive takeaway or interesting question for listeners.
 
-    ${leo.name}'s character:
-    - Personality: ${leo.personality}
-    - Speaking style: ${leo.speakingStyle}
-    - Specifics: ${leo.specifics}
-    - Léo should use references to very recent pop culture elements that French kids aged 7-10 can relate to.
+IMPORTANT: Each line of dialogue must be no more than 100 characters long.
 
-    Guidelines for improvement:
-    1. Ensure the episode starts with the hosts greeting each other and briefly explaining what they'll be talking about.
-    2. Adjust the word count to be closer to the target (${targetWordCount} words).
-    3. Ensure the language is simple and appropriate for 9-year-old French children.
-    4. Maintain the unique speaking styles and personalities of Romy and Léo.
-    5. Keep the content very educational but fun and engaging.
-    6. Add or remove content as necessary to meet the target duration.
-    7. Ensure a natural flow of conversation with occasional interruptions or tangents.
-    8. Include some playful, friendly teasing between Romy and Léo throughout the episode.
-    9. Make sure the hosts use age-appropriate French expressions and slang.
-    10. Incorporate sound effects or imaginative scenarios if they're not already present.
-    11. Ensure Léo makes 1-3 references to recent pop culture elements (e.g., popular kids' movies, TV shows, video games, or toys). use only existing references.
+Your output should be a valid JSON object with a 'script' key containing an array of dialogue objects. Begin directly with the JSON output, using this format:
 
-    Here's the current script:
-    ${JSON.stringify(script, null, 2)}
+{
+  "script": [
+    {"speaker": "Romy", "text": "Salut Léo ! Tu sais ce qu'on va faire aujourd'hui ?"},
+    {"speaker": "Léo", "text": "Euh... On va parler des dinosaures ?"},
+    {"speaker": "Romy", "text": "Presque ! On va parler des fossiles. C'est comme des empreintes de dinosaures, mais en plus cool !"}
+  ]
+}`;
 
-    Please provide the improved script as a valid JSON object with a 'script' key containing an array of dialogue objects. Your response should only include the JSON object, nothing else. Use this format:
+    const userPrompt = `Please review and improve the following script:
+${JSON.stringify(script, null, 2)}
 
-    <example>
-    {
-      "script": [
-        {"speaker": "Romy", "text": "Salut Léo ! Tu sais ce qu'on va faire aujourd'hui ?"},
-        {"speaker": "Léo", "text": "Euh... On va parler des dinosaures ?"},
-        {"speaker": "Romy", "text": "Presque ! On va parler des fossiles. C'est comme des empreintes de dinosaures, mais en plus cool !"},
-        {"speaker": "Léo", "text": "Oh, comme dans ce nouveau jeu vidéo 'Dino Detective' ? J'adore chercher des fossiles dedans !"}
-      ]
-    }
-    </example>
+Target word count: ${targetWordCount}
+Current word count: ${currentWordCount}
 
-    Ensure that the JSON is properly formatted and does not contain any unescaped special characters.`;
+Improve the script according to the guidelines provided in the system prompt.`;
 
     const message = await anthropic.messages.create({
       model: "claude-3-sonnet-20240229",
       max_tokens: 1500,
       temperature: 0.7,
+      system: systemPrompt,
       messages: [
         {
           role: "user",
-          content: prompt
+          content: userPrompt
         }
       ]
     });
