@@ -2,8 +2,10 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Script from '@/components/Script';
+import dynamic from 'next/dynamic';
 import { ArrowLeftIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
+
+const Script = dynamic(() => import('@/components/Script'), { ssr: false });
 
 interface ScriptLine {
   id: number;
