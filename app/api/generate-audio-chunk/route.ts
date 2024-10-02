@@ -5,11 +5,12 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import util from 'util';
+import os from 'os';
 
 const execPromise = util.promisify(exec);
 
 const SAMPLE_RATE = 44100;
-const TEMP_DIR = path.join(process.cwd(), 'tmp');
+const TEMP_DIR = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'tmp');
 
 async function generateAndUploadAudio(text: string, speaker: string, topicId: string) {
   console.log(`Starting audio generation for: ${speaker}`);
